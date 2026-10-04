@@ -58,29 +58,27 @@
 ### 3.1 Level-0 Context Diagram (System Level)
 
 ```mermaid
-graph TD
+flowchart TD
     Camera[IP Surveillance Camera] -->|RTSP Video Stream| System((AU-AVAS Core Engine))
     System -->|Barrier Trigger Signal| Actuator[Barrier Controller ESP32]
     System -->|Real-time Entry Logs| Admin[Security Dashboard UI]
     DB[(Campus Vehicle Database)] <-->|Query / Match Record| System
 
-
-graph TD
+flowchart TD
     C[IP Camera] -->|1. RTSP Stream| P1[1.0 Data Ingestion]
     P1 -->|Raw Frame Tensor| P2[2.0 Image Preprocessor]
     P2 -->|Normalized 640x640 Tensor| P3[3.0 YOLO Plate Detector]
     P3 -->|Plate Bounding Box ROI| P4[4.0 OCR Extraction]
     P4 -->|Plate String| P5[5.0 Database Verification]
     
-    DB[(Vehicle Whitelist DB)] <-->|Query & Registered Status| P5
+    DB[(Vehicle Whitelist DB)] <-->|Query & Match| P5
     
-    P5 -->|Authorized: Open Signal| P6[6.0 Hardware Actuation]
-    P6 -->|GPIO / Serial Command| Barrier[Automatic Barrier]
+    P5 -->|Authorized| P6[6.0 Hardware Actuation]
+    P6 -->|Signal| Barrier[Automatic Barrier]
     
-    P5 -->|Verification Result & Metadata| P7[7.0 Alert & Audit Logger]
+    P5 -->|Verification Result| P7[7.0 Alert & Audit Logger]
     P7 -->|Write Record| Logs[(System Log DB)]
-    P7 -->|Unauthorized Alert| UI[Security Guard UI]
-
+    P7 -->|Alert Notification| UI[Security Guard UI]
 
 """
 AU-AVAS Modular Software Architecture Blueprint
