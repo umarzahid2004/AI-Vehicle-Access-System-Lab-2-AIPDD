@@ -57,29 +57,71 @@
 
 ### 3.1 Level-0 Context Diagram (System Level)
 
-```mermaid
-flowchart TD
-    Camera[IP Surveillance Camera] -->|RTSP Video Stream| System((AU-AVAS Core Engine))
-    System -->|Barrier Trigger Signal| Actuator[Barrier Controller ESP32]
-    System -->|Real-time Entry Logs| Admin[Security Dashboard UI]
-    DB[(Campus Vehicle Database)] <-->|Query / Match Record| System
+```
+       +---------------------------------------------+
+       |             IP Surveillance Camera          |
+       +---------------------------------------------+
+                              |
+                              | [RTSP Video Stream]
+                              v
+       +---------------------------------------------+
+       |                                             |
+       |             AU-AVAS CORE ENGINE             |<====> [Campus Whitelist DB]
+       |                                             |        (Query / Verification)
+       +---------------------------------------------+
+              |                               |
+              | [Barrier Pulse Signal]        | [Real-time Logs & Alerts]
+              v                               v
++-------------------------------+   +---------------------------------+
+| Barrier Controller (ESP32)    |   |     Security Guard Dashboard    |
++-------------------------------+   +---------------------------------+
+```
 
-flowchart TD
-    C[IP Camera] -->|1. RTSP Stream| P1[1.0 Data Ingestion]
-    P1 -->|Raw Frame Tensor| P2[2.0 Image Preprocessor]
-    P2 -->|Normalized 640x640 Tensor| P3[3.0 YOLO Plate Detector]
-    P3 -->|Plate Bounding Box ROI| P4[4.0 OCR Extraction]
-    P4 -->|Plate String| P5[5.0 Database Verification]
-    
-    DB[(Vehicle Whitelist DB)] <-->|Query & Match| P5
-    
-    P5 -->|Authorized| P6[6.0 Hardware Actuation]
-    P6 -->|Signal| Barrier[Automatic Barrier]
-    
-    P5 -->|Verification Result| P7[7.0 Alert & Audit Logger]
-    P7 -->|Write Record| Logs[(System Log DB)]
-    P7 -->|Alert Notification| UI[Security Guard UI]
+### 3.2 Level-1 Detailed Data Flow Diagram
 
+```
+[ IP Camera Stream ]
+        |
+        v
++-------------------------------------------------------+
+|  1.0 Data Ingestion Module                            |
+|      - Frame buffer capture via RTSP                  |
++-------------------------------------------------------+
+        |  (Raw Image Frame)
+        v
++-------------------------------------------------------+
+|  2.0 Image Preprocessing Module                       |
+|      - Letterbox resize to 640x640 & normalization    |
++-------------------------------------------------------+
+        |  (Normalized Tensor)
+        v
++-------------------------------------------------------+
+|  3.0 YOLOv8 Plate Detector Module                     |
+|      - Locates and crops License Plate ROI            |
++-------------------------------------------------------+
+        |  (Cropped Plate Image)
+        v
++-------------------------------------------------------+
+|  4.0 OCR Extraction Engine                            |
+|      - Character segmentation & text parsing          |
++-------------------------------------------------------+
+        |  (Alphanumeric String: e.g. "ICT-ABC-123")
+        v
++-------------------------------------------------------+
+|  5.0 Database Verification Engine                     |<====> [( Campus Vehicle DB )]
+|      - Queries whitelist record                       |
++-------------------------------------------------------+
+        |
+        +-----> [ If Match Found ] ----> 6.0 Actuation Engine ----> [ Barrier Servo / Motor ]
+        |
+        +-----> [ Log All Events ] ----> 7.0 Logging Service  ----> [ SQLite / UI Alerts ]
+```
+
+---
+
+## Task 4: Modular Software Architecture Blueprint
+
+```python
 """
 AU-AVAS Modular Software Architecture Blueprint
 Defines module boundaries, class contracts, typing, and method signatures.
@@ -101,7 +143,7 @@ class DataIngestion:
         pass
 
     def fetch_frame(self) -> Tuple[bool, Optional[np.ndarray]]:
-        """Retrieves the latest video frame from buffer."""
+        """Retrieves latest video frame from buffer."""
         pass
 
     def release_stream(self) -> None:
@@ -119,7 +161,7 @@ class ImagePreprocessor:
         pass
 
     def crop_bounding_box(self, frame: np.ndarray, bbox: Tuple[int, int, int, int]) -> np.ndarray:
-        """Crops Region of Interest (ROI) containing the detected number plate."""
+        """Crops Region of Interest (ROI) containing detected number plate."""
         pass
 
 
@@ -152,6 +194,10 @@ class AlertLogger:
         """Sends command signal ('OPEN'/'CLOSE') to microcontroller."""
         pass
 
+    def log_event(self, plate_number: str, is_authorized: bool, metadata: Dict[str, Any]) -> bool:
+        """Persists access attempt with timestamp and status to audit database."""
+        pass
+```
     def log_event(self, plate_number: str, is_authorized: bool, metadata: Dict[str, Any]) -> bool:
         """Persists access attempt with timestamp and status to audit database."""
         pass
